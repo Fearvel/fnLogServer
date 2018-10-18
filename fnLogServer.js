@@ -1,48 +1,65 @@
-//import the express module
-var express = require('express');
+// Node.js: HTTP SERVER Handling GET and POST Request
+// Show HTML Form at GET request.
+// At POST Request: Grab form data and display them.
+// Get Complete Source Code from Pabbly.com
 
-//import body-parser
-var bodyParser = require('body-parser');
 
-//store the express in a variable
-var app = express();
+var http = require('http');
+var fs = require('fs');
+var mysql = require('mysql');
 
-//configure body-parser for express
-app.use(bodyParser.urlencoded({extended:false}));
-app.use(bodyParser.json());
+var server = http.createServer(function (req, res) {
+    var con = ConnectToMysql();
 
-//allow express to access our html (index.html) file
-app.get('/index.html', function(req, res) {
-    res.sendFile(__dirname + "/" + "index.html");
-});
 
-//route the GET request to the specified path, "/user".
-//This sends the user information to the path
-app.post('/user', function(req, res){
-    response = {
-        Guid : req.body.Guid,
-        Title : req.body.Title,
-        Description: req.body.Description,
-        LogType: req.body.LogType,
-        DateOfIncident: req.body.DateOfIncident
+    if (req.method === "POST") {
 
-    };
+        var body = "";
+        req.on("data", function (chunk) {
+            body += chunk;
+        });
 
-    //this line is optional and will print the response on the command prompt
-    //It's useful so that we know what infomration is being transferred
-    //using the server
-    console.log(response);
+        req.on("end", function () {
+            res.writeHead(200, {"Content-Type": "text/html"});
+            var obj = JSON.parse(TransformToJson(body));
+            con.query('Insert into fnLog.Log (ProgramName,Guid, Title,Description, LogType) values (?,?,?,?,?)', ['test', obj.GUID, obj.Title, obj.Description, parseInt(obj.LogType)], function (error, results, fields) {
+                if (error) {
+                    res.end("False");
+                } else {
+                    res.end("True");
+                }
 
-    //convert the response in JSON format
-    res.end(JSON.stringify(response));
-});
+            });
+        });
+    }
+    else {
+        res.end("False");
+    }
 
-//This piece of code creates the server
-//and listens to the request at port 8888
-//we are also generating a message once the
-//server is created
-var server = app.listen(8888, function(){
-    var host = server.address().address;
-    var port = server.address().port;
-    console.log("Example app listening at http://%s:%s", host, port);
-});
+}).listen(8888);
+
+function TransformToJson(s) {
+    s = "{\n\t\"" + s;
+    while (s.includes("=")) {
+        s = s.replace("=", "\": \"");
+    }
+    while (s.includes("\&")) {
+        s = s.replace("\&", "\",\n\t\"");
+    }
+    s = s + "\"\n}";
+    return s;
+
+}
+
+
+function ConnectToMysql() {
+    var con = mysql.createConnection({
+        host: "localhost",
+        user: "testuser",
+        password: "password"
+    });
+    return con;
+}
+
+
+    
