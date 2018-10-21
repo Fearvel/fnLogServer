@@ -10,7 +10,7 @@ module.exports = {
             + currentdate.getSeconds();
         return datetime;
     },
-    
+
     IsNumber: function (n) {
         return !isNaN(parseFloat(n)) && isFinite(n);
     },
