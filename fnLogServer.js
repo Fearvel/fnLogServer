@@ -11,7 +11,7 @@ var serverPort = 6544;
 var server = https.createServer(options, app);
 var io = require('socket.io')(server);
 const MySqlConnection = ConnectToMysql();
-const Version = "2.0.0.0";
+const Version = "2.0.0.1";
 
 function ConnectToMysql() {
     var con = mysql.createConnection({
@@ -48,6 +48,9 @@ io.on('connection', (socket) => {
             socket.emit('closingAnswer', SimpleAnswer(false));
             socket.disconnect();
         }
+        socket.on('disconnect', () => {
+            console.log(socket.id.toString() + " Connection Closed");
+        });
     });
 
     //Acces Function for retriving the log Table
