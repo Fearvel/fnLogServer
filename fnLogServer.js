@@ -5,13 +5,13 @@ var express = require('express');
 var mysql = require('mysql');
 var app = express();
 var options = {
-    key: fs.readFileSync('./testKey.pem'),
-    cert: fs.readFileSync('./testCert.pem')
+    key: fs.readFileSync(config.CertPath.key),
+    cert: fs.readFileSync(config.CertPath.cert)
 };
 var server = https.createServer(options, app);
 var io = require('socket.io')(server);
 const MySqlConnection = ConnectToMysql();
-const Version = "2.0.1.0";
+const Version = "2.0.1.1";
 
 
 function ConnectToMysql() {
@@ -66,10 +66,18 @@ io.on('connection', (socket) => {
                     if (results.length >= 1) {
                         console.log(socket.id.toString() + " AccessKey Accepted");
                         MySqlConnection.query('Select * from log', (err, results) => {
-                            socket.emit('LogTable', JSON.stringify(results));
-                            socket.disconnect();
+                            if (err) {
+                                console.log(err);
+                                socket.emit('closingAnswer', SimpleAnswer(false));
+                                socket.disconnect();
+                            }
+                            else {
+                                socket.emit('LogTable', JSON.stringify(results));
+                                socket.disconnect();
+                            }
                         });
                     } else {
+                        console.log(err);
                         console.log(socket.id.toString() + " AccessKey Declined: ");
                         socket.emit('closingAnswer', SimpleAnswer(false));
                         socket.disconnect();

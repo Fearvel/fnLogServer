@@ -1,4 +1,8 @@
 {
+  "CertPath":{
+    "key": "./testKey.pem",
+    "cert": "./testCert.pem"
+  },
   "MysqlConnectionInformation":{
     "host": "192.168.1.10",
     "user": "testuser",
