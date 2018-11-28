@@ -1,4 +1,5 @@
 var fs = require('fs');
+var config = require('./config.json');
 var https = require('https');
 var express = require('express');
 var mysql = require('mysql');
@@ -7,24 +8,25 @@ var options = {
     key: fs.readFileSync('./testKey.pem'),
     cert: fs.readFileSync('./testCert.pem')
 };
-var serverPort = 6544;
 var server = https.createServer(options, app);
 var io = require('socket.io')(server);
 const MySqlConnection = ConnectToMysql();
-const Version = "2.0.0.1";
+const Version = "2.0.1.0";
+
 
 function ConnectToMysql() {
     var con = mysql.createConnection({
-        host: "localhost",
-        user: "testuser",
-        password: "testpassword",
-        database: "fnlog"
+        host: config.MysqlConnectionInformation.host,
+        user: config.MysqlConnectionInformation.user,
+        password: config.MysqlConnectionInformation.password,
+        database: config.MysqlConnectionInformation.database
     });
     return con;
 }
 
+
 io.on('connection', (socket) => {
- //   socket.emit('info', Version);
+    //   socket.emit('info', Version);
     console.log(socket.id.toString() + " Connection Opened");
 
     //LOG Function
@@ -32,10 +34,11 @@ io.on('connection', (socket) => {
         console.log(socket.id.toString() + " New Log: " + log);
         var obj = JSON.parse(log);
         if (CheckValues(obj)) {
-            MySqlConnection.query('Insert into log (ProgramName, Guid, Title, Description, LogType) values (?,?,?,?,?)',
-                [obj.ProgramName, obj.Guid, obj.Title, obj.Description, parseInt(obj.LogType)],
+            MySqlConnection.query('Insert into Log (ProgramName, ProgramVersion, FnLogVersion, Title, Description, LogType, Guid) values (?,?,?,?,?,?,?)',
+                [obj.ProgramName, obj.ProgramVersion, obj.FnLogVersion, obj.Title, obj.Description, parseInt(obj.LogType), obj.Guid],
                 (err, results) => {
                     if (err) {
+                        console.log(err);
                         socket.emit('closingAnswer', SimpleAnswer(false));
                         socket.disconnect();
 
@@ -57,8 +60,8 @@ io.on('connection', (socket) => {
     socket.on('retrieve', (accessKey) => {
         console.log(socket.id.toString() + " AccessKey Received: ");
         var obj = JSON.parse(accessKey);
-        if (obj.Val != null && obj.Val.length >0){
-            MySqlConnection.query('Select * from accesskeys where DateofExpiry >= NOW() and AccessKey = (?)', obj.Val, (err, results) => {
+        if (obj.Val != null && obj.Val.length > 0) {
+            MySqlConnection.query('Select * from AccessKeys where DateofExpiry >= NOW() and AccessKey = (?)', obj.Val, (err, results) => {
                 if (!err) {
                     if (results.length >= 1) {
                         console.log(socket.id.toString() + " AccessKey Accepted");
@@ -87,8 +90,8 @@ io.on('connection', (socket) => {
     });
 });
 
-server.listen(serverPort, () => {
-    console.log('fnLog Server V %s, Listening on %s',Version , serverPort);
+server.listen(config.ServerPort, () => {
+    console.log('fnLog Server V %s, Listening on %s', Version, config.ServerPort);
 });
 
 function SimpleAnswer(b) {

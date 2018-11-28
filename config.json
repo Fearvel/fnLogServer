@@ -1,0 +1,9 @@
+{
+  "MysqlConnectionInformation":{
+    "host": "192.168.1.10",
+    "user": "testuser",
+    "password": "testpassword",
+    "database": "FnLog"
+  },
+  "ServerPort": "9024"
+}
