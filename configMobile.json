@@ -4,10 +4,10 @@
     "cert": "./testCert.pem"
   },
   "MysqlConnectionInformation":{
-    "host": "192.168.1.10",
+    "host": "localhost",
     "user": "testuser",
     "password": "testpassword",
     "database": "FnLog"
   },
-  "ServerPort": "9020"
+  "ServerPort": "9024"
 }

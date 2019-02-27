@@ -65,14 +65,14 @@ io.on('connection', (socket) => {
                 if (!err) {
                     if (results.length >= 1) {
                         console.log(socket.id.toString() + " AccessKey Accepted");
-                        MySqlConnection.query('Select * from log', (err, results) => {
+                        MySqlConnection.query('Select * from Log', (err, results) => {
                             if (err) {
                                 console.log(err);
                                 socket.emit('closingAnswer', SimpleAnswer(false));
                                 socket.disconnect();
                             }
                             else {
-                                socket.emit('LogTable', JSON.stringify(results));
+                                socket.emit('logTable', JSON.stringify(results));
                                 socket.disconnect();
                             }
                         });
@@ -92,9 +92,10 @@ io.on('connection', (socket) => {
             socket.emit('closingAnswer', SimpleAnswer(false));
             socket.disconnect();
         }
-        socket.on('disconnect', () => {
-            console.log(socket.id.toString() + " Connection Closed");
-        });
+
+    });
+    socket.on('disconnect', () => {
+        console.log(socket.id.toString() + " Connection Closed");
     });
 });
 

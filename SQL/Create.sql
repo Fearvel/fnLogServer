@@ -12,7 +12,7 @@ CREATE TABLE `FnLog`.`Log` (
   `Guid` varchar(100) NOT NULL,
   `DateOfIncident` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`Id`)
-)
+);
 
 
 CREATE TABLE `FnLog`.`AccessKeys` (
