@@ -47,16 +47,16 @@ var sql;
                 " `UUID`," +
                 " `ProgramName`," +
                 " `ProgramVersion`," +
-                " `FnLogVersion`," +
+                " `FnLogClientVersion`," +
                 " `Title`, " +
                 "`Description`," +
                 "`LogType`) values (?, ?, ?, ?, ?, ?, ?) ", [log.UUID,
                 log.ProgramName,
                 log.ProgramVersion,
-                log.FnLogVersion,
+                log.FnLogClientVersion,
                 log.Title,
                 log.Description,
-                log.LogType], function (err, rows) {
+                log.LogType], function (err) {
                 if (err)
                     console.log(err);
             });

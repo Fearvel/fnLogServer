@@ -3,16 +3,6 @@
     "key": "./testKey.pem",
     "cert": "./testCert.pem"
   },
-  "SQLServerType": "MYSQL",
-  "MSSQLConnectionInformation":{
-    "server": "192.168.1.17",
-    "user": "FnLogDev",
-    "password": "test123-",
-    "database": "FnLogDev",
-    "options": {
-      "encrypt": true
-    }
-  },
   "MySQLConnectionInformation":{
     "host": "192.168.1.16",
     "user": "DEV-FNLOG-SERVER",
@@ -20,7 +10,7 @@
     "database": "DEV-FNLOG"
   },
   "ServerPort": "9020",
-  "ConfigVersion": "1.0.1.0",
+  "ConfigVersion": "1.0.0.0",
   "compilerOptions": {
     "resolveJsonModule": true,
     "esModuleInterop": true

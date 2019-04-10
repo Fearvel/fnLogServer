@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var fs = require("fs");
 // @ts-ignore
 var config = require("./config.json");
+//import * as http from 'http'; //If using HTTP or a HTTP ReverseProxy
 var https = require("https");
 var express = require("express");
 var commonTypes = require("./DataTypes/CommonTypes");
@@ -13,9 +14,10 @@ var options = {
     key: fs.readFileSync(config.CertPath.key),
     cert: fs.readFileSync(config.CertPath.cert)
 };
+//let server = http.createServer(app); //If using HTTP or a HTTP ReverseProxy
 var server = https.createServer(options, app);
 var io = require('socket.io')(server);
-var Version = "2.0.3.0";
+var Version = "2.0.4.0";
 /**
  * Socket.io Server Handler
  * Reacts on incoming Connections
@@ -30,8 +32,8 @@ io.on('connection', function (socket) {
             mysqlConnectionManager.insertServerLog(socket.id.toString(), " New Log: " + logJSON);
             var obj = JSON.parse(logJSON);
             var log = Object.assign(new commonTypes.ctypes.FnLog(), obj);
-            if (handleAndCheckIncomingLog(log)) {
-                insertIntoLogTable(log);
+            if (processIncomingLog(log, socket)) {
+                mysqlConnectionManager.insertIntoFnLog(log);
             }
         }
         catch (e) {
@@ -62,28 +64,6 @@ io.on('connection', function (socket) {
         }
     });
     /**
-     * Checks the validity of the received log via checkValues and calls insertIntoLogTable
-     * emits negative SimpleAnswer on validity check failed and closes connection
-     * @param obj
-     * @constructor
-     */
-    function handleAndCheckIncomingLog(obj) {
-        if (!checkValues(obj)) {
-            sendSimpleResult(socket);
-            return false;
-        }
-        sendSimpleResult(socket, true);
-        return true;
-    }
-    /**
-     * Inserts FnLog into the Database
-     * @constructor
-     * @param log
-     */
-    function insertIntoLogTable(log) {
-        mysqlConnectionManager.insertIntoFnLog(log);
-    }
-    /**
      * Disconnect event
      * Inserts Connection closed message into the Serverlog Table
      */
@@ -100,6 +80,21 @@ server.listen(config.ServerPort, function () {
         Version + " Listening on: " + config.ServerPort);
     console.log('fnLog Server V %s, Listening on %s', Version, config.ServerPort);
 });
+/**
+ * Checks the validity of the received log via checkValues and calls insertIntoLogTable
+ * emits negative SimpleAnswer on validity check failed and closes connection
+ * @param obj
+ * @param socket
+ * @constructor
+ */
+function processIncomingLog(obj, socket) {
+    if (!checkValues(obj)) {
+        sendSimpleResult(socket);
+        return false;
+    }
+    sendSimpleResult(socket, true);
+    return true;
+}
 /**
  * Sends a SimpleResult
  * @param socket

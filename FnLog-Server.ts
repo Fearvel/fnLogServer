@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 // @ts-ignore
 import * as config from './config.json';
+//import * as http from 'http'; //If using HTTP or a HTTP ReverseProxy
 import * as https from 'https';
 import * as express from 'express';
 import * as commonTypes from './DataTypes/CommonTypes';
@@ -12,9 +13,11 @@ let options = {
     key: fs.readFileSync(config.CertPath.key),
     cert: fs.readFileSync(config.CertPath.cert)
 };
+//let server = http.createServer(app); //If using HTTP or a HTTP ReverseProxy
 let server = https.createServer(options, app);
+
 let io = require('socket.io')(server);
-const Version = "2.0.3.0";
+const Version = "2.0.4.0";
 
 
 /**
@@ -22,7 +25,9 @@ const Version = "2.0.3.0";
  * Reacts on incoming Connections
  */
 io.on('connection', (socket) => {
+
     mysqlConnectionManager.insertServerLog(socket.id.toString(), " Connection Opened");
+
     /**
      * Handle incoming log requests
      */
@@ -32,8 +37,8 @@ io.on('connection', (socket) => {
             let obj = JSON.parse(logJSON);
             let log = Object.assign(new commonTypes.ctypes.FnLog(), obj);
 
-            if (handleAndCheckIncomingLog(log)) {
-                insertIntoLogTable(log);
+            if (processIncomingLog(log, socket)) {
+                mysqlConnectionManager.insertIntoFnLog(log);
             }
         } catch (e) {
             sendSimpleResult(socket, false);
@@ -64,30 +69,6 @@ io.on('connection', (socket) => {
     });
 
     /**
-     * Checks the validity of the received log via checkValues and calls insertIntoLogTable
-     * emits negative SimpleAnswer on validity check failed and closes connection
-     * @param obj
-     * @constructor
-     */
-    function handleAndCheckIncomingLog(obj: commonTypes.ctypes.FnLog): boolean {
-        if (!checkValues(obj)) {
-            sendSimpleResult(socket);
-            return false;
-        }
-        sendSimpleResult(socket, true);
-        return true;
-    }
-
-    /**
-     * Inserts FnLog into the Database
-     * @constructor
-     * @param log
-     */
-    function insertIntoLogTable(log: commonTypes.ctypes.FnLog): void {
-        mysqlConnectionManager.insertIntoFnLog(log);
-    }
-
-    /**
      * Disconnect event
      * Inserts Connection closed message into the Serverlog Table
      */
@@ -95,7 +76,6 @@ io.on('connection', (socket) => {
         mysqlConnectionManager.insertServerLog(socket.id.toString(), "Connection Closed");
     });
 });
-
 
 /**
  * Entry Point of the Socket.io server
@@ -107,6 +87,21 @@ server.listen(config.ServerPort, () => {
     console.log('fnLog Server V %s, Listening on %s', Version, config.ServerPort);
 });
 
+/**
+ * Checks the validity of the received log via checkValues and calls insertIntoLogTable
+ * emits negative SimpleAnswer on validity check failed and closes connection
+ * @param obj
+ * @param socket
+ * @constructor
+ */
+function processIncomingLog(obj: commonTypes.ctypes.FnLog, socket :any): boolean {
+    if (!checkValues(obj)) {
+        sendSimpleResult(socket);
+        return false;
+    }
+    sendSimpleResult(socket, true);
+    return true;
+}
 
 /**
  * Sends a SimpleResult
@@ -119,7 +114,6 @@ function sendSimpleResult(socket, res: boolean = false): void {
     socket.disconnect();
 }
 
-
 /**
  * Checks the incoming log for the right types
  * @param {object} obj
@@ -130,5 +124,4 @@ function checkValues(obj: any): boolean {
         obj.Title != null && obj.Description != null && obj.LogType != null &&
         obj.ProgramName.length > 0 && obj.ProgramName !== "UNDEFINED" && obj.UUID.length > 0 &&
         obj.Title.length > 0 && obj.Description.length > 0;
-
 }
