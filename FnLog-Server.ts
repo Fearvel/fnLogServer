@@ -3,8 +3,10 @@ import * as fs from 'fs';
 import * as config from './config.json';
 import * as https from 'https';
 import * as express from 'express';
-import * as mysql from 'mysql';
+import * as commonTypes from './DataTypes/CommonTypes';
+import * as MysqlConnector from './MySQLConnector';
 
+let mysqlConnectionManager = new MysqlConnector.sql.MySQLConnector;
 let app = express();
 let options = {
     key: fs.readFileSync(config.CertPath.key),
@@ -12,150 +14,85 @@ let options = {
 };
 let server = https.createServer(options, app);
 let io = require('socket.io')(server);
-let MySqlConnection = ConnectToMysql();
-let Version = "T 2.0.2.0";
-
-
-/**
- * Creates the MySQL Connection
- * based on the information
- * in the json config file
- * @returns {C}
- */
-function ConnectToMysql() {
-    let con = mysql.createConnection({
-        host: config.MysqlConnectionInformation.host,
-        user: config.MysqlConnectionInformation.user,
-        password: config.MysqlConnectionInformation.password,
-        database: config.MysqlConnectionInformation.database
-    });
-    return con;
-}
+const Version = "2.0.3.0";
 
 
 /**
  * Socket.io Server Handler
- * Reacts on incomming Connections
+ * Reacts on incoming Connections
  */
 io.on('connection', (socket) => {
-    console.log(socket.id.toString() + " Connection Opened");//Displays an Incomming Connection with id
-
+    mysqlConnectionManager.insertServerLog(socket.id.toString(), " Connection Opened");
     /**
      * Handle incoming log requests
      */
-    socket.on('log', (log) => {
-        console.log(socket.id.toString() + " New Log: " + log);
-        let obj = JSON.parse(log);
+    socket.on('log', (logJSON) => {
+        try {
+            mysqlConnectionManager.insertServerLog(socket.id.toString(), " New Log: " + logJSON);
+            let obj = JSON.parse(logJSON);
+            let log = Object.assign(new commonTypes.ctypes.FnLog(), obj);
 
-        CheckForIncomingLogAndHandleLog(obj)
-
-        /**
-         * Prints out an message if the connection is closed
-         */
-        socket.on('disconnect', () => {
-            console.log(socket.id.toString() + " Connection Closed");
-        });
+            if (handleAndCheckIncomingLog(log)) {
+                insertIntoLogTable(log);
+            }
+        } catch (e) {
+            sendSimpleResult(socket, false);
+        }
     });
 
     /**
-     * Checks the validity of the received log via CheckValues and calls InsertIntoLogTable
+     * Handles incoming logRequest
+     * Sends A filtered Log, if the token is in the Database
+     */
+    socket.on('logRequest', (getLogRequest) => {
+        try {
+            let logRequest = JSON.parse(getLogRequest);
+            mysqlConnectionManager.insertServerLog(socket.id.toString(), " logRequest: " + getLogRequest);
+            mysqlConnectionManager.checkAccessToken(logRequest.Token).then(check => {
+                    if (check) {
+                        mysqlConnectionManager.getLogs(logRequest.Filter).then(rows => {
+                            socket.emit('logRequestResult', JSON.stringify(rows));
+                        });
+                    } else {
+                        socket.emit('logRequestResult', "[]");
+                    }
+                }
+            )
+        } catch (e) {
+            socket.emit('logRequestResult', "[]");
+        }
+    });
+
+    /**
+     * Checks the validity of the received log via checkValues and calls insertIntoLogTable
      * emits negative SimpleAnswer on validity check failed and closes connection
      * @param obj
      * @constructor
      */
-    function CheckForIncomingLogAndHandleLog(obj: any): void {
-        if (CheckValues(obj)) {
-            InsertIntoLogTable(obj);
-        } else {
-            socket.emit('closingAnswer', SimpleAnswer(false));
-            socket.disconnect();
+    function handleAndCheckIncomingLog(obj: commonTypes.ctypes.FnLog): boolean {
+        if (!checkValues(obj)) {
+            sendSimpleResult(socket);
+            return false;
         }
+        sendSimpleResult(socket, true);
+        return true;
     }
 
     /**
      * Inserts FnLog into the Database
-     * @param obj a checked FnLog as an obj
      * @constructor
+     * @param log
      */
-    function InsertIntoLogTable(obj: any): void {
-        MySqlConnection.query(
-            'Insert into Log (ProgramName, ProgramVersion, FnLogVersion, Title, Description, LogType, Guid) values (?,?,?,?,?,?,?)',
-            [obj.ProgramName, obj.ProgramVersion, obj.FnLogVersion, obj.Title, obj.Description, parseInt(obj.LogType), obj.Guid],
-            (err, results) => {
-                if (err) {
-                    console.log(err);
-                    socket.emit('closingAnswer', SimpleAnswer(false));
-                    socket.disconnect();
-
-                } else {
-                    socket.emit('closingAnswer', SimpleAnswer(true));
-                    socket.disconnect();
-                }
-            });
-    }
-
-
-    /**
-     * EXPERIMENTAL
-     * Handle incoming retrieve requests
-     */
-    socket.on('retrieve', (accessKey) => {
-        console.log(socket.id.toString() + " AccessKey Received: ");
-        let obj = JSON.parse(accessKey);
-        GetAccessKeyAndProgress(obj);
-    });
-
-    /**
-     * executes a mysql query and calls CheckAccessKeyAndProgress
-     * on error emits close
-     * @param obj
-     * @constructor
-     */
-    function GetAccessKeyAndProgress(obj: any) {
-        if (obj.Val != null && obj.Val.length > 0) {
-            MySqlConnection.query('Select * from AccessKeys where DateofExpiry >= NOW() and AccessKey = (?)', obj.Val, (err, results) => {
-                if (!err) {
-                    CheckAccessKeyAndProgress(results);
-                } else {
-                    socket.emit('closingAnswer', SimpleAnswer(false));
-                    socket.disconnect();
-                }
-            });
-        } else {
-            socket.emit('closingAnswer', SimpleAnswer(false));
-            socket.disconnect();
-        }
+    function insertIntoLogTable(log: commonTypes.ctypes.FnLog): void {
+        mysqlConnectionManager.insertIntoFnLog(log);
     }
 
     /**
-     * Checks if the AccessKey is in the database
-     * and emits the result
-     * @param results mysql query result
-     * @constructor
+     * Disconnect event
+     * Inserts Connection closed message into the Serverlog Table
      */
-    function CheckAccessKeyAndProgress(results: any): void {
-        if (results.length >= 1) {
-            console.log(socket.id.toString() + " AccessKey Accepted");
-            MySqlConnection.query('Select * from Log', (err, results) => {
-                if (err) {
-                    console.log(err);
-                    socket.emit('closingAnswer', SimpleAnswer(false));
-                    socket.disconnect();
-                } else {
-                    socket.emit('logTable', JSON.stringify(results));
-                    socket.disconnect();
-                }
-            });
-        } else {
-            console.log(err);
-            console.log(socket.id.toString() + " AccessKey Declined: ");
-            socket.emit('closingAnswer', SimpleAnswer(false));
-            socket.disconnect();
-        }
-    }
-
     socket.on('disconnect', () => {
-        console.log(socket.id.toString() + " Connection Closed");
+        mysqlConnectionManager.insertServerLog(socket.id.toString(), "Connection Closed");
     });
 });
 
@@ -165,38 +102,33 @@ io.on('connection', (socket) => {
  * Starts the server and outputs Version and Port
  */
 server.listen(config.ServerPort, () => {
+    mysqlConnectionManager.insertServerLog("", "fnLog Server: " +
+        Version + " Listening on: " + config.ServerPort);
     console.log('fnLog Server V %s, Listening on %s', Version, config.ServerPort);
 });
 
+
 /**
- * Creates an SimpleAnswer out of an boolean
- * An SimpleAnswer is nothing else than an JSON
- * with the var Result that will either be True or False
- * @param {object} obj
- * @returns {boolean}
+ * Sends a SimpleResult
+ * @param socket
+ * @param res
+ * @constructor
  */
-function SimpleAnswer(b) {
-    let s = "{\"Result\": ";
-    if (b) {
-        s += "\"True\"";
-    } else {
-        s += "\"False\"";
-    }
-    s += "}";
-    return s;
+function sendSimpleResult(socket, res: boolean = false): void {
+    socket.emit('closer', JSON.stringify({Result: res}));
+    socket.disconnect();
 }
+
 
 /**
  * Checks the incoming log for the right types
  * @param {object} obj
  * @returns {boolean}
  */
-function CheckValues(obj: any): boolean {
-    if (obj.ProgramName != null && obj.ProgramName != null && obj.Guid != null &&
+function checkValues(obj: any): boolean {
+    return obj.ProgramName != null && obj.UUID != null &&
         obj.Title != null && obj.Description != null && obj.LogType != null &&
-        obj.ProgramName.length > 0 && obj.ProgramName !== "UNDEFINED" && obj.Guid.length > 0 &&
-        obj.Title.length > 0 && obj.Description.length > 0) {
-        return true;
-    }
-    return false;
+        obj.ProgramName.length > 0 && obj.ProgramName !== "UNDEFINED" && obj.UUID.length > 0 &&
+        obj.Title.length > 0 && obj.Description.length > 0;
+
 }

@@ -3,11 +3,27 @@
     "key": "./testKey.pem",
     "cert": "./testCert.pem"
   },
-  "MysqlConnectionInformation":{
-    "host": "192.168.1.10",
-    "user": "testuser",
-    "password": "testpassword",
-    "database": "FnLog"
+  "SQLServerType": "MYSQL",
+  "MSSQLConnectionInformation":{
+    "server": "192.168.1.17",
+    "user": "FnLogDev",
+    "password": "test123-",
+    "database": "FnLogDev",
+    "options": {
+      "encrypt": true
+    }
   },
-  "ServerPort": "9020"
+  "MySQLConnectionInformation":{
+    "host": "192.168.1.16",
+    "user": "DEV-FNLOG-SERVER",
+    "password": "GYFqcVcGfVDjHRjtWdaw",
+    "database": "DEV-FNLOG"
+  },
+  "ServerPort": "9020",
+  "ConfigVersion": "1.0.1.0",
+  "compilerOptions": {
+    "resolveJsonModule": true,
+    "esModuleInterop": true
+  }
+
 }
