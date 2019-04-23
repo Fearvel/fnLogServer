@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var fs = require("fs");
@@ -38,6 +39,25 @@ io.on('connection', function (socket) {
         }
         catch (e) {
             sendSimpleResult(socket, false);
+        }
+    });
+    /**
+     * Handle incoming logPak requests
+     */
+    socket.on('logPak', function (logJSON) {
+        mysqlConnectionManager.insertServerLog(socket.id.toString(), " New Log: " + logJSON);
+        var obj = JSON.parse(logJSON);
+        sendSimpleResult(socket, true);
+        for (var _i = 0, obj_1 = obj; _i < obj_1.length; _i++) {
+            var logEntry = obj_1[_i];
+            try {
+                var log = Object.assign(new commonTypes.ctypes.FnLog(), logEntry);
+                if (processIncomingLogNoSend(log, socket)) {
+                    mysqlConnectionManager.insertIntoFnLog(log);
+                }
+            }
+            catch (e) {
+            }
         }
     });
     /**
@@ -88,11 +108,19 @@ server.listen(config.ServerPort, function () {
  * @constructor
  */
 function processIncomingLog(obj, socket) {
-    if (!checkValues(obj)) {
+    var temp = processIncomingLogNoSend(obj, socket);
+    if (temp == true) {
+        sendSimpleResult(socket, true);
+    }
+    else {
         sendSimpleResult(socket);
+    }
+    return temp;
+}
+function processIncomingLogNoSend(obj, socket) {
+    if (!checkValues(obj)) {
         return false;
     }
-    sendSimpleResult(socket, true);
     return true;
 }
 /**
@@ -115,6 +143,6 @@ function checkValues(obj) {
     return obj.ProgramName != null && obj.UUID != null &&
         obj.Title != null && obj.Description != null && obj.LogType != null &&
         obj.ProgramName.length > 0 && obj.ProgramName !== "UNDEFINED" && obj.UUID.length > 0 &&
-        obj.Title.length > 0 && obj.Description.length > 0;
+        obj.Title.length > 0;
 }
 //# sourceMappingURL=FnLog-Server.js.map

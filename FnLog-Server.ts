@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import * as fs from 'fs';
 // @ts-ignore
 import * as config from './config.json';
@@ -44,6 +45,25 @@ io.on('connection', (socket) => {
             sendSimpleResult(socket, false);
         }
     });
+
+    /**
+     * Handle incoming logPak requests
+     */
+    socket.on('logPak', (logJSON) => {
+        mysqlConnectionManager.insertServerLog(socket.id.toString(), " New Log: " + logJSON);
+        let obj = JSON.parse(logJSON);
+        sendSimpleResult(socket, true);
+        for (let logEntry of obj) {
+            try {
+                let log = Object.assign(new commonTypes.ctypes.FnLog(), logEntry);
+                if (processIncomingLogNoSend(log, socket)) {
+                    mysqlConnectionManager.insertIntoFnLog(log);
+                }
+            } catch (e) {
+            }
+        }
+    });
+
 
     /**
      * Handles incoming logRequest
@@ -94,12 +114,23 @@ server.listen(config.ServerPort, () => {
  * @param socket
  * @constructor
  */
-function processIncomingLog(obj: commonTypes.ctypes.FnLog, socket :any): boolean {
-    if (!checkValues(obj)) {
+function processIncomingLog(obj: commonTypes.ctypes.FnLog, socket: any): boolean {
+    let temp = processIncomingLogNoSend(obj, socket);
+
+    if (temp == true) {
+        sendSimpleResult(socket, true);
+
+    } else {
         sendSimpleResult(socket);
+
+    }
+    return temp;
+}
+
+function processIncomingLogNoSend(obj: commonTypes.ctypes.FnLog, socket: any): boolean {
+    if (!checkValues(obj)) {
         return false;
     }
-    sendSimpleResult(socket, true);
     return true;
 }
 
@@ -123,5 +154,5 @@ function checkValues(obj: any): boolean {
     return obj.ProgramName != null && obj.UUID != null &&
         obj.Title != null && obj.Description != null && obj.LogType != null &&
         obj.ProgramName.length > 0 && obj.ProgramName !== "UNDEFINED" && obj.UUID.length > 0 &&
-        obj.Title.length > 0 && obj.Description.length > 0;
+        obj.Title.length > 0;
 }
