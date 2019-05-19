@@ -1,3 +1,20 @@
+--Copyright (c) 2018, Andreas Schreiner
+--For FnLogServer 2.0.4.0
+--This program is made for a Case sensitive MySql Server
+
+create database FnLog;
+use FnLog;
+
+--Creates the internal logging Table ServerLog
+CREATE TABLE `ServerLog` (
+  `Id` int(11) NOT NULL AUTO_INCREMENT,
+  `SocketId` varchar(100) DEFAULT NULL,
+  `Message` text NOT NULL,
+  `DateOfIncident` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`Id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+--Creates the table for incoming logs
 CREATE TABLE `Log` (
   `Id` int(11) NOT NULL AUTO_INCREMENT,
   `ProgramName` varchar(300) NOT NULL,
@@ -9,8 +26,9 @@ CREATE TABLE `Log` (
   `UUID` varchar(100) NOT NULL,
   `DateOfIncident` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`Id`)
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
+--Creates the table for administrative access(future option)
 CREATE TABLE `AccessToken` (
   `Id` int(11) NOT NULL AUTO_INCREMENT,
   `Token` varchar(200) NOT NULL,
@@ -18,12 +36,6 @@ CREATE TABLE `AccessToken` (
   `DateOfExpiry` datetime DEFAULT NULL,
   `Notes` text,
   PRIMARY KEY (`Id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
-CREATE TABLE `ServerLog` (
-  `Id` int(11) NOT NULL AUTO_INCREMENT,
-  `SocketId` varchar(100) DEFAULT NULL,
-  `Message` text NOT NULL,
-  `DateOfIncident` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`Id`)
-) ENGINE=InnoDB AUTO_INCREMENT=64 DEFAULT CHARSET=latin1;
+select 'DB created' AS '';

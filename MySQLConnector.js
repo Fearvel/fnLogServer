@@ -1,5 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+/**
+ * Connection Class for MySql Connections
+ * @author Andreas Schreiner
+ * @copyright Andreas Schreiner 2019
+ */
 var mysql = require("mysql");
 // @ts-ignore
 var config = require("./config.json");
@@ -9,6 +14,10 @@ var sql;
      * Class for Managing The SQL Connection
      */
     var MySQLConnector = /** @class */ (function () {
+        /**
+         * Constructor
+         * Creates the connection
+         */
         function MySQLConnector() {
             /**
              * Config, read from config.json

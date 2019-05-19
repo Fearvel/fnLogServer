@@ -1,4 +1,10 @@
 #!/usr/bin/env node
+/**
+ * FnLog Server
+ * A Telemetry Server to Log any occurring errors or events
+ * @author Andreas Schreiner
+ * @copyright Andreas Schreiner 2019
+ */
 import * as fs from 'fs';
 // @ts-ignore
 import * as config from './config.json';
@@ -110,23 +116,25 @@ server.listen(config.ServerPort, () => {
 /**
  * Checks the validity of the received log via checkValues and calls insertIntoLogTable
  * emits negative SimpleAnswer on validity check failed and closes connection
- * @param obj
- * @param socket
- * @constructor
+ * @param obj the Log information
+ * @param socket server socket
  */
 function processIncomingLog(obj: commonTypes.ctypes.FnLog, socket: any): boolean {
     let temp = processIncomingLogNoSend(obj, socket);
-
     if (temp == true) {
         sendSimpleResult(socket, true);
-
     } else {
         sendSimpleResult(socket);
-
     }
     return temp;
 }
 
+/**
+ * Checks the validity of the received log via checkValues and calls insertIntoLogTable
+ * emits nothing.
+ * @param obj the Log information
+ * @param socket server socket
+ */
 function processIncomingLogNoSend(obj: commonTypes.ctypes.FnLog, socket: any): boolean {
     if (!checkValues(obj)) {
         return false;

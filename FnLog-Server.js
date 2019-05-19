@@ -103,9 +103,8 @@ server.listen(config.ServerPort, function () {
 /**
  * Checks the validity of the received log via checkValues and calls insertIntoLogTable
  * emits negative SimpleAnswer on validity check failed and closes connection
- * @param obj
- * @param socket
- * @constructor
+ * @param obj the Log information
+ * @param socket server socket
  */
 function processIncomingLog(obj, socket) {
     var temp = processIncomingLogNoSend(obj, socket);
@@ -117,6 +116,12 @@ function processIncomingLog(obj, socket) {
     }
     return temp;
 }
+/**
+ * Checks the validity of the received log via checkValues and calls insertIntoLogTable
+ * emits nothing.
+ * @param obj the Log information
+ * @param socket server socket
+ */
 function processIncomingLogNoSend(obj, socket) {
     if (!checkValues(obj)) {
         return false;
